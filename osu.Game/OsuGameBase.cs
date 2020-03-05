@@ -35,6 +35,7 @@ using osu.Game.Rulesets.Mods;
 using osu.Game.Scoring;
 using osu.Game.Skinning;
 using osuTK.Input;
+using cloudsu.Resources;
 
 namespace osu.Game
 {
@@ -111,7 +112,7 @@ namespace osu.Game
 
         public OsuGameBase()
         {
-            Name = @"osu!lazer";
+            Name = @"cloudsu!";
         }
 
         private DependencyContainer dependencies;
@@ -127,6 +128,7 @@ namespace osu.Game
         private void load()
         {
             Resources.AddStore(new DllResourceStore(OsuResources.ResourceAssembly));
+            Resources.AddStore(new DllResourceStore(CloudsuResources.ResourceAssembly));
 
             dependencies.Cache(contextFactory = new DatabaseContextFactory(Storage));
 

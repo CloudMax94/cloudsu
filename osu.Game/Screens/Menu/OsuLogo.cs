@@ -28,7 +28,7 @@ namespace osu.Game.Screens.Menu
     /// </summary>
     public class OsuLogo : BeatSyncedContainer
     {
-        public readonly Color4 OsuPink = OsuColour.FromHex(@"e967a1");
+        public readonly Color4 OsuPink = OsuColour.FromHex(@"7dceea");
 
         private const double transition_length = 300;
 
@@ -176,8 +176,8 @@ namespace osu.Game.Screens.Menu
                                                                         triangles = new Triangles
                                                                         {
                                                                             TriangleScale = 4,
-                                                                            ColourLight = OsuColour.FromHex(@"ff7db7"),
-                                                                            ColourDark = OsuColour.FromHex(@"de5b95"),
+                                                                            ColourLight = OsuColour.FromHex(@"91e2fd"),
+                                                                            ColourDark = OsuColour.FromHex(@"7acbe6"),
                                                                             RelativeSizeAxes = Axes.Both,
                                                                         },
                                                                     }
@@ -258,8 +258,8 @@ namespace osu.Game.Screens.Menu
             sampleClick = audio.Samples.Get(@"Menu/osu-logo-select");
             sampleBeat = audio.Samples.Get(@"Menu/osu-logo-heartbeat");
 
-            logo.Texture = textures.Get(@"Menu/logo");
-            ripple.Texture = textures.Get(@"Menu/logo");
+            logo.Texture = textures.Get(@"Menu/cloudsulogo");
+            ripple.Texture = textures.Get(@"Menu/cloudsulogo");
         }
 
         private int lastBeatIndex;
