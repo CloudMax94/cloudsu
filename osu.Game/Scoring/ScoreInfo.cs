@@ -38,6 +38,9 @@ namespace osu.Game.Scoring
         [JsonProperty(@"pp")]
         public double? PP { get; set; }
 
+        [JsonIgnore]
+        public string DisplayPP => (PP.HasValue ? ((float) PP).ToString("N2") : "?.??") + "pp";
+
         [JsonProperty("max_combo")]
         public int MaxCombo { get; set; }
 

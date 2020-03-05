@@ -48,6 +48,16 @@ namespace osu.Game.Screens.Ranking.Pages
         {
             const float user_header_height = 120;
 
+            var pp = "";
+            if (Score.PP.HasValue) {
+                pp = Score.DisplayPP;
+            } else {
+                // If the score does not have PP set, we calculate it locally
+                // and mark it with an asterisk.
+                // This does NOT account for Difficulty Adjust and customized DT as that data is lost(?)
+                pp = ((float) Score.Ruleset.CreateInstance().CreatePerformanceCalculator(Beatmap, score).Calculate()).ToString("N2") + "pp*";
+            }
+
             Children = new Drawable[]
             {
                 new Container
@@ -79,6 +89,16 @@ namespace osu.Game.Screens.Ranking.Pages
                             Origin = Anchor.TopCentre,
                             RelativeSizeAxes = Axes.X,
                             Height = user_header_height,
+                        },
+                        new OsuSpriteText
+                        {
+                            Anchor = Anchor.TopCentre,
+                            Origin = Anchor.TopCentre,
+                            Colour =colours.BlueDarker,
+                            Shadow = false,
+                            Margin = new MarginPadding { Top = 10, Bottom = 0 },
+                            Font = OsuFont.GetFont(size: 56, weight: FontWeight.Bold, italics: true),
+                            Text = pp,
                         },
                         new UpdateableRank(Score.Rank)
                         {
