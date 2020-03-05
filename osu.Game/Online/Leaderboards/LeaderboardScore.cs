@@ -163,7 +163,7 @@ namespace osu.Game.Online.Leaderboards
                                                 {
                                                     Origin = Anchor.BottomLeft,
                                                     Anchor = Anchor.BottomLeft,
-                                                    Size = new Vector2(87f, 20f),
+                                                    Size = new Vector2(60f, 20f),
                                                     Masking = true,
                                                     Children = new Drawable[]
                                                     {
@@ -277,7 +277,8 @@ namespace osu.Game.Online.Leaderboards
         protected virtual IEnumerable<LeaderboardScoreStatistic> GetStatistics(ScoreInfo model) => new[]
         {
             new LeaderboardScoreStatistic(FontAwesome.Solid.Link, "Max Combo", model.MaxCombo.ToString()),
-            new LeaderboardScoreStatistic(FontAwesome.Solid.Crosshairs, "Accuracy", model.DisplayAccuracy)
+            new LeaderboardScoreStatistic(FontAwesome.Solid.Crosshairs, "Accuracy", model.DisplayAccuracy),
+            new LeaderboardScoreStatistic(FontAwesome.Solid.Trophy, "Performance Points", model.DisplayPP)
         };
 
         protected override bool OnHover(HoverEvent e)
