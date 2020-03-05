@@ -401,6 +401,8 @@ namespace osu.Game.Screens.Play
 
             ScoreProcessor.PopulateScore(score);
 
+            score.PP = ruleset.CreatePerformanceCalculator(Beatmap.Value, score).Calculate();
+
             return score;
         }
 
