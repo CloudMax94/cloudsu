@@ -25,6 +25,7 @@ using osu.Framework.Extensions.IEnumerableExtensions;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input;
 using osu.Framework.Input.Bindings;
+using osu.Framework.Input.Events;
 using osu.Framework.Platform;
 using osu.Framework.Threading;
 using osu.Game.Beatmaps;
@@ -42,6 +43,7 @@ using osu.Game.Overlays.Volume;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Scoring;
 using osu.Game.Screens.Select;
+using osu.Game.Updater;
 using osu.Game.Utils;
 using LogLevel = osu.Framework.Logging.LogLevel;
 
@@ -391,24 +393,35 @@ namespace osu.Game
 
         protected virtual Loader CreateLoader() => new Loader();
 
+        protected virtual UpdateManager CreateUpdateManager() => new UpdateManager();
+
         protected override Container CreateScalingContainer() => new ScalingContainer(ScalingMode.Everything);
 
         #region Beatmap progression
 
         private void beatmapChanged(ValueChangedEvent<WorkingBeatmap> beatmap)
         {
-            var nextBeatmap = beatmap.NewValue;
-            if (nextBeatmap?.Track != null)
-                nextBeatmap.Track.Completed += currentTrackCompleted;
-
-            var oldBeatmap = beatmap.OldValue;
-            if (oldBeatmap?.Track != null)
-                oldBeatmap.Track.Completed -= currentTrackCompleted;
+            beatmap.OldValue?.CancelAsyncLoad();
 
             updateModDefaults();
 
-            oldBeatmap?.CancelAsyncLoad();
-            nextBeatmap?.BeginAsyncLoad();
+            var newBeatmap = beatmap.NewValue;
+
+            if (newBeatmap != null)
+            {
+                newBeatmap.Track.Completed += () => Scheduler.AddOnce(() => trackCompleted(newBeatmap));
+                newBeatmap.BeginAsyncLoad();
+            }
+
+            void trackCompleted(WorkingBeatmap b)
+            {
+                // the source of track completion is the audio thread, so the beatmap may have changed before firing.
+                if (Beatmap.Value != b)
+                    return;
+
+                if (!Beatmap.Value.Track.Looping && !Beatmap.Disabled)
+                    MusicController.NextTrack();
+            }
         }
 
         private void modsChanged(ValueChangedEvent<IReadOnlyList<Mod>> mods)
@@ -428,12 +441,6 @@ namespace osu.Game
                     mod.ReadFromDifficulty(adjustedDifficulty);
             }
         }
-
-        private void currentTrackCompleted() => Schedule(() =>
-        {
-            if (!Beatmap.Value.Track.Looping && !Beatmap.Disabled)
-                musicController.NextTrack();
-        });
 
         #endregion
 
@@ -586,7 +593,7 @@ namespace osu.Game
 
             loadComponentSingleFile(new OnScreenDisplay(), Add, true);
 
-            loadComponentSingleFile(musicController = new MusicController(), Add, true);
+            loadComponentSingleFile(MusicController = new MusicController(), Add, true);
 
             loadComponentSingleFile(notifications = new NotificationOverlay
             {
@@ -601,6 +608,7 @@ namespace osu.Game
             loadComponentSingleFile(cloudsu = new CloudsuOverlay(), overlayContent.Add, true);
             loadComponentSingleFile(direct = new DirectOverlay(), overlayContent.Add, true);
             loadComponentSingleFile(social = new SocialOverlay(), overlayContent.Add, true);
+            var rankingsOverlay = loadComponentSingleFile(new RankingsOverlay(), overlayContent.Add, true);
             loadComponentSingleFile(channelManager = new ChannelManager(), AddInternal, true);
             loadComponentSingleFile(chatOverlay = new ChatOverlay(), overlayContent.Add, true);
             loadComponentSingleFile(Settings = new SettingsOverlay { GetToolbarHeight = () => ToolbarOffset }, leftFloatingOverlayContent.Add, true);
@@ -629,6 +637,7 @@ namespace osu.Game
             chatOverlay.State.ValueChanged += state => channelManager.HighPollRate.Value = state.NewValue == Visibility.Visible;
 
             Add(externalLinkOpener = new ExternalLinkOpener());
+            Add(CreateUpdateManager()); // dependency on notification overlay
 
             // side overlays which cancel each other.
             var singleDisplaySideOverlays = new OverlayContainer[] { Settings, notifications };
@@ -657,7 +666,7 @@ namespace osu.Game
             }
 
             // ensure only one of these overlays are open at once.
-            var singleDisplayOverlays = new OverlayContainer[] { chatOverlay, social, cloudsu, direct, changelogOverlay };
+            var singleDisplayOverlays = new OverlayContainer[] { chatOverlay, social, cloudsu, direct, changelogOverlay, rankingsOverlay };
 
             foreach (var overlay in singleDisplayOverlays)
             {
@@ -807,6 +816,13 @@ namespace osu.Game
             return d;
         }
 
+        protected override bool OnScroll(ScrollEvent e)
+        {
+            // forward any unhandled mouse scroll events to the volume control.
+            volume.Adjust(GlobalAction.IncreaseVolume, e.ScrollDelta.Y, e.IsPrecise);
+            return true;
+        }
+
         public bool OnPressed(GlobalAction action)
         {
             if (introScreen == null) return false;
@@ -891,7 +907,7 @@ namespace osu.Game
 
         private ScalingContainer screenContainer;
 
-        private MusicController musicController;
+        protected MusicController MusicController { get; private set; }
 
         protected override bool OnExiting()
         {
@@ -949,7 +965,7 @@ namespace osu.Game
             {
                 OverlayActivationMode.Value = newOsuScreen.InitialOverlayActivationMode;
 
-                musicController.AllowRateAdjustments = newOsuScreen.AllowRateAdjustments;
+                MusicController.AllowRateAdjustments = newOsuScreen.AllowRateAdjustments;
 
                 if (newOsuScreen.HideOverlaysOnEnter)
                     CloseAllOverlays();

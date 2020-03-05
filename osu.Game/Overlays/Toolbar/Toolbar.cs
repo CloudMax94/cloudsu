@@ -71,6 +71,7 @@ namespace osu.Game.Overlays.Toolbar
                     {
                         new ToolbarCloudsuButton(),
                         new ToolbarChangelogButton(),
+                        new ToolbarRankingsButton(),
                         new ToolbarDirectButton(),
                         new ToolbarChatButton(),
                         new ToolbarSocialButton(),
