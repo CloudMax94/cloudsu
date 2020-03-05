@@ -34,6 +34,7 @@ namespace osu.Game.Input.Bindings
             new KeyBinding(new[] { InputKey.Control, InputKey.T }, GlobalAction.ToggleToolbar),
             new KeyBinding(new[] { InputKey.Control, InputKey.O }, GlobalAction.ToggleSettings),
             new KeyBinding(new[] { InputKey.Control, InputKey.D }, GlobalAction.ToggleDirect),
+            new KeyBinding(new[] { InputKey.Control, InputKey.P }, GlobalAction.ToggleCloudsu),
 
             new KeyBinding(InputKey.Escape, GlobalAction.Back),
             new KeyBinding(InputKey.ExtraMouseButton1, GlobalAction.Back),
@@ -88,6 +89,9 @@ namespace osu.Game.Input.Bindings
 
         [Description("Toggle settings")]
         ToggleSettings,
+
+        [Description("Toggle cloudsu!")]
+        ToggleCloudsu,
 
         [Description("Toggle osu!direct")]
         ToggleDirect,

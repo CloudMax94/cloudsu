@@ -63,6 +63,8 @@ namespace osu.Game
 
         private NowPlayingOverlay nowPlaying;
 
+        private CloudsuOverlay cloudsu;
+
         private DirectOverlay direct;
 
         private SocialOverlay social;
@@ -596,6 +598,7 @@ namespace osu.Game
             loadComponentSingleFile(screenshotManager, Add);
 
             //overlay elements
+            loadComponentSingleFile(cloudsu = new CloudsuOverlay(), overlayContent.Add, true);
             loadComponentSingleFile(direct = new DirectOverlay(), overlayContent.Add, true);
             loadComponentSingleFile(social = new SocialOverlay(), overlayContent.Add, true);
             loadComponentSingleFile(channelManager = new ChannelManager(), AddInternal, true);
@@ -654,7 +657,7 @@ namespace osu.Game
             }
 
             // ensure only one of these overlays are open at once.
-            var singleDisplayOverlays = new OverlayContainer[] { chatOverlay, social, direct, changelogOverlay };
+            var singleDisplayOverlays = new OverlayContainer[] { chatOverlay, social, cloudsu, direct, changelogOverlay };
 
             foreach (var overlay in singleDisplayOverlays)
             {
@@ -839,6 +842,10 @@ namespace osu.Game
 
                 case GlobalAction.ToggleSettings:
                     Settings.ToggleVisibility();
+                    return true;
+
+                case GlobalAction.ToggleCloudsu:
+                    cloudsu.ToggleVisibility();
                     return true;
 
                 case GlobalAction.ToggleDirect:
