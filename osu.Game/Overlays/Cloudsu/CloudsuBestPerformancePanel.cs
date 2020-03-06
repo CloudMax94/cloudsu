@@ -18,8 +18,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
-using osu.Framework.Logging;
-
 namespace osu.Game.Overlays.Cloudsu
 {
     public class CloudsuBestPerformancePanel : FillFlowContainer
@@ -135,7 +133,20 @@ namespace osu.Game.Overlays.Cloudsu
             PPSuffix.Colour = colourProvider.Highlight1; // Light1
             BonusPPText.Colour = colourProvider.Highlight1;
             BonusPPSuffix.Colour = colourProvider.Highlight1; // Light1
+
+            scoreManager.ItemAdded += scoreWasAdded;
+            scoreManager.ItemRemoved += scoreWasRemoved;
         }
+
+        protected void scoreWasAdded(ScoreInfo score) => Schedule(() =>
+        {
+            refresh();
+        });
+
+        protected void scoreWasRemoved(ScoreInfo score) => Schedule(() =>
+        {
+            refresh();
+        });
 
         public void refresh()
         {
@@ -200,6 +211,17 @@ namespace osu.Game.Overlays.Cloudsu
                 working.Value = bm;
             }
             beatmap.Value.Track.Restart();
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            base.Dispose(isDisposing);
+
+            if (scoreManager != null)
+            {
+                scoreManager.ItemAdded -= scoreWasAdded;
+                scoreManager.ItemRemoved -= scoreWasRemoved;
+            }
         }
     }
 }

@@ -130,14 +130,6 @@ namespace osu.Game.Overlays
             scrollContainer.Padding = new MarginPadding { Top = Header.Height };
         }
 
-        protected override void PopIn()
-        {
-            base.PopIn();
-            if (Current.Value == "Best Performance") {
-                BestPerformancePanel.refresh();
-            }
-        }
-
         public void ShowBestPerformancePage()
         {
             Current.Value = "Best Performance";
@@ -159,7 +151,6 @@ namespace osu.Game.Overlays
             }
             else
             {
-                BestPerformancePanel.refresh();
                 BestPerformancePanel.Show();
                 BestPerformancePanel.FadeTo(1f, 300, Easing.OutQuint);
             }
