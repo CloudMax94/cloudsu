@@ -185,7 +185,7 @@ namespace osu.Game.Overlays.Cloudsu
                                         Origin = Anchor.CentreRight,
                                         Direction = FillDirection.Horizontal,
                                         Spacing = new Vector2(2),
-                                        Children = Score.Mods.Select(mod => new ModIcon(mod)
+                                        Children = Score.Mods.Select(mod => new ModIcon(mod, Score.Beatmap.BaseDifficulty)
                                         {
                                             Scale = new Vector2(0.35f)
                                         }).ToList(),

@@ -238,6 +238,8 @@ namespace osu.Game.Overlays.Cloudsu
             // Why do we have to query the beatmaps and grab their BeatmapSet metadata?
             BeatmapInfo beatmap = beatmapManager.QueryBeatmap(b => b.ID == model.BeatmapInfoID);
             model.Beatmap.Metadata = beatmap.BeatmapSet.Metadata;
+            // We set the BaseDifficulty so that we can pass on the data to ModIcon
+            model.Beatmap.BaseDifficulty = beatmap.BaseDifficulty;
             return new DrawableBestPerformanceScore(model, Math.Pow(0.95, ItemsContainer.Count))
             {
                 SelectBeatmap = SelectBeatmap
