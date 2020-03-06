@@ -34,7 +34,7 @@ namespace osu.Game.Overlays.Cloudsu
         private BeatmapManager beatmapManager { get; set; }
 
         [Resolved]
-        private IBindable<WorkingBeatmap> beatmap { get; set; }
+        private Bindable<WorkingBeatmap> beatmap { get; set; }
 
         public readonly Bindable<RulesetInfo> ruleset = new Bindable<RulesetInfo>();
 
@@ -190,6 +190,10 @@ namespace osu.Game.Overlays.Cloudsu
 
         public void SelectBeatmap(int beatmapInfoID)
         {
+            if (beatmap.Disabled) {
+                return;
+            }
+
             var bm = beatmapManager.GetWorkingBeatmap(beatmapManager.QueryBeatmap(b => b.ID == beatmapInfoID));
 
             if (beatmap is Bindable<WorkingBeatmap> working) {
