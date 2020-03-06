@@ -92,6 +92,7 @@ namespace osu.Game.Screens.Select
                 },
             };
 
+            ppSortCheckbox.Current.Value = true;
             tabs.Current.ValueChanged += _ => invokeOnFilter();
             ppSortCheckbox.Current.ValueChanged += _ => invokeOnFilter();
             modsCheckbox.Current.ValueChanged += _ => invokeOnFilter();
