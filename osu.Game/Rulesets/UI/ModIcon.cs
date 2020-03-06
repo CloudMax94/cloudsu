@@ -8,6 +8,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Sprites;
+using osu.Game.Configuration;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Rulesets.Mods;
@@ -48,7 +49,11 @@ namespace osu.Game.Rulesets.UI
 
             type = mod.Type;
 
-            TooltipText = mod.Name;
+            var tooltip = mod.Name;
+            foreach (var (attr, property) in mod.GetOrderedSettingsSourceProperties())
+                tooltip += " - " + attr.Label + ": " + property.GetValue(mod);
+
+            TooltipText = tooltip;
 
             Size = new Vector2(size);
 
