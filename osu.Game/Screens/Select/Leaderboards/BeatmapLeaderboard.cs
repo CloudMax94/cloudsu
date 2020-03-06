@@ -77,6 +77,25 @@ namespace osu.Game.Screens.Select.Leaderboards
             }
         }
 
+        private bool sortByPP;
+
+        /// <summary>
+        /// Whether to sort by PP when retrieving scores.
+        /// </summary>
+        public bool SortByPP
+        {
+            get => sortByPP;
+            set
+            {
+                if (value == sortByPP)
+                    return;
+
+                sortByPP = value;
+
+                UpdateScores();
+            }
+        }
+
         [Resolved]
         private ScoreManager scoreManager { get; set; }
 
@@ -142,8 +161,7 @@ namespace osu.Game.Screens.Select.Leaderboards
                     var selectedMods = mods.Value.Select(m => m.Acronym);
                     scores = scores.Where(s => s.Mods.Any(m => selectedMods.Contains(m.Acronym)));
                 }
-
-                Scores = scores.OrderByDescending(s => s.TotalScore).ToArray();
+                Scores = scores.OrderByDescending(s => sortByPP ? s.PP : s.TotalScore).ToArray();
                 PlaceholderState = Scores.Any() ? PlaceholderState.Successful : PlaceholderState.NoScores;
 
                 return null;
@@ -179,7 +197,11 @@ namespace osu.Game.Screens.Select.Leaderboards
 
             req.Success += r =>
             {
-                scoresCallback?.Invoke(r.Scores.Select(s => s.CreateScoreInfo(rulesets)));
+                var scores = r.Scores.Select(s => s.CreateScoreInfo(rulesets));
+                if (sortByPP)
+                    scores = scores.OrderByDescending(s => s.PP);
+
+                scoresCallback?.Invoke(scores);
                 TopScore = r.UserScore;
             };
 

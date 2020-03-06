@@ -78,7 +78,8 @@ namespace osu.Game.Screens.Select
         /// </summary>
         /// <param name="tab">The tab that was selected.</param>
         /// <param name="selectedMods">Whether the currently-selected mods should be considered.</param>
-        protected virtual void OnTabChanged(BeatmapDetailAreaTabItem tab, bool selectedMods)
+        /// <param name="sortByPP">Whether the contents should be sorted by PP.</param>
+        protected virtual void OnTabChanged(BeatmapDetailAreaTabItem tab, bool selectedMods, bool sortByPP)
         {
             switch (tab)
             {

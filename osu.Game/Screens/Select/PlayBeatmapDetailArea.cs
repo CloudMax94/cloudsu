@@ -49,11 +49,12 @@ namespace osu.Game.Screens.Select
             Leaderboard.RefreshScores();
         }
 
-        protected override void OnTabChanged(BeatmapDetailAreaTabItem tab, bool selectedMods)
+        protected override void OnTabChanged(BeatmapDetailAreaTabItem tab, bool selectedMods, bool sortByPP)
         {
-            base.OnTabChanged(tab, selectedMods);
+            base.OnTabChanged(tab, selectedMods, sortByPP);
 
             Leaderboard.FilterMods = selectedMods;
+            Leaderboard.SortByPP = sortByPP;
 
             switch (tab)
             {

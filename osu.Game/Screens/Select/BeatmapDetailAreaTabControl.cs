@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using osuTK;
 using osuTK.Graphics;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -26,7 +27,7 @@ namespace osu.Game.Screens.Select
             set => tabs.Current = value;
         }
 
-        public Action<BeatmapDetailAreaTabItem, bool> OnFilter; //passed the selected tab and if mods is checked
+        public Action<BeatmapDetailAreaTabItem, bool, bool> OnFilter; //passed the selected tab and if pp sort or mods is checked
 
         public IReadOnlyList<BeatmapDetailAreaTabItem> TabItems
         {
@@ -34,6 +35,7 @@ namespace osu.Game.Screens.Select
             set => tabs.Items = value;
         }
 
+        private readonly OsuTabControlCheckbox ppSortCheckbox;
         private readonly OsuTabControlCheckbox modsCheckbox;
         private readonly OsuTabControl<BeatmapDetailAreaTabItem> tabs;
         private readonly Container tabsContainer;
@@ -63,39 +65,55 @@ namespace osu.Game.Screens.Select
                         IsSwitchable = true,
                     },
                 },
-                modsCheckbox = new OsuTabControlCheckbox
+                new FillFlowContainer
                 {
+                    RelativeSizeAxes = Axes.Both,
                     Anchor = Anchor.BottomRight,
                     Origin = Anchor.BottomRight,
-                    Text = @"Selected Mods",
-                    Alpha = 0,
+                    Direction = FillDirection.Horizontal,
+                    Spacing = new Vector2(10, 0),
+                    Children = new Drawable[]
+                    {
+                        modsCheckbox = new OsuTabControlCheckbox
+                        {
+                            Anchor = Anchor.BottomRight,
+                            Origin = Anchor.BottomRight,
+                            Text = @"Selected Mods",
+                            Alpha = 0,
+                        },
+                        ppSortCheckbox = new OsuTabControlCheckbox
+                        {
+                            Anchor = Anchor.BottomRight,
+                            Origin = Anchor.BottomRight,
+                            Text = @"Sort by PP",
+                            Alpha = 0,
+                        },
+                    }
                 },
             };
 
             tabs.Current.ValueChanged += _ => invokeOnFilter();
+            ppSortCheckbox.Current.ValueChanged += _ => invokeOnFilter();
             modsCheckbox.Current.ValueChanged += _ => invokeOnFilter();
         }
 
         [BackgroundDependencyLoader]
         private void load(OsuColour colour, OsuConfigManager config)
         {
-            modsCheckbox.AccentColour = tabs.AccentColour = colour.YellowLight;
+            ppSortCheckbox.AccentColour = modsCheckbox.AccentColour = tabs.AccentColour = colour.YellowLight;
         }
 
         private void invokeOnFilter()
         {
-            OnFilter?.Invoke(tabs.Current.Value, modsCheckbox.Current.Value);
+            OnFilter?.Invoke(tabs.Current.Value, modsCheckbox.Current.Value, ppSortCheckbox.Current.Value);
 
-            if (tabs.Current.Value.FilterableByMods)
-            {
-                modsCheckbox.FadeTo(1, 200, Easing.OutQuint);
+            modsCheckbox.FadeTo(tabs.Current.Value.FilterableByMods ? 1: 0, 200, Easing.OutQuint);
+            ppSortCheckbox.FadeTo(tabs.Current.Value.SortableByPP ? 1 : 0, 200, Easing.OutQuint);
+
+            if (tabs.Current.Value.FilterableByMods || tabs.Current.Value.SortableByPP)
                 tabsContainer.Padding = new MarginPadding { Right = 100 };
-            }
             else
-            {
-                modsCheckbox.FadeTo(0, 200, Easing.OutQuint);
                 tabsContainer.Padding = new MarginPadding();
-            }
         }
     }
 }

@@ -12,6 +12,8 @@ namespace osu.Game.Screens.Select
 
         public override bool FilterableByMods => true;
 
+        public override bool SortableByPP => true;
+
         public readonly TScope Scope;
 
         public BeatmapDetailAreaLeaderboardTabItem(TScope scope)

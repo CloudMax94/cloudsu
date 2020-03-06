@@ -77,9 +77,9 @@ namespace osu.Game.Screens.Multi.Components
             playlist.SelectedItem.BindTo(SelectedItem);
         }
 
-        protected override void OnTabChanged(BeatmapDetailAreaTabItem tab, bool selectedMods)
+        protected override void OnTabChanged(BeatmapDetailAreaTabItem tab, bool selectedMods, bool sortByPP)
         {
-            base.OnTabChanged(tab, selectedMods);
+            base.OnTabChanged(tab, selectedMods, sortByPP);
 
             switch (tab)
             {
