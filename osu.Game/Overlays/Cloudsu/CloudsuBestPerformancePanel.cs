@@ -9,6 +9,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Game.Beatmaps;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
+using osu.Game.Graphics.UserInterface;
 using osu.Game.Online.API;
 using osu.Game.Overlays;
 using osu.Game.Rulesets;
@@ -36,6 +37,9 @@ namespace osu.Game.Overlays.Cloudsu
 
         public readonly Bindable<RulesetInfo> ruleset = new Bindable<RulesetInfo>();
 
+        private List<ScoreInfo> Scores = new List<ScoreInfo>();
+
+        protected readonly FillFlowContainer StatsContainer;
         protected readonly FillFlowContainer ItemsContainer;
 
         protected readonly OsuSpriteText PlaysText;
@@ -49,65 +53,82 @@ namespace osu.Game.Overlays.Cloudsu
             RelativeSizeAxes = Axes.X;
             AutoSizeAxes = Axes.Y;
             Direction = FillDirection.Vertical;
-            ruleset.ValueChanged += _ => refresh();
+            ruleset.ValueChanged += _ => Schedule(refreshScores);
 
             Children = new Drawable[]
             {
-                new FillFlowContainer
+                StatsContainer = new FillFlowContainer
                 {
-                    AutoSizeAxes = Axes.Both,
-                    Direction = FillDirection.Horizontal,
-                    Spacing = new Vector2(0, 0),
-                    Margin = new MarginPadding { Top = 10 },
+                    AutoSizeAxes = Axes.Y,
+                    RelativeSizeAxes = Axes.X,
+                    Direction = FillDirection.Vertical,
+                    Alpha = 0,
                     Children = new Drawable[]
                     {
-                        PlaysText = new OsuSpriteText
+                        new FillFlowContainer
                         {
-                            Anchor = Anchor.BottomLeft,
-                            Origin = Anchor.BottomLeft,
-                            Font = OsuFont.GetFont(size: 24, weight: FontWeight.Bold),
-                            Text = "??? performances"
-                        }
-                    }
-                },
-                new FillFlowContainer
-                {
-                    AutoSizeAxes = Axes.Both,
-                    Direction = FillDirection.Horizontal,
-                    Spacing = new Vector2(0, 0),
-                    Margin = new MarginPadding { Top = 5 },
-                    Children = new Drawable[]
-                    {
+                            AutoSizeAxes = Axes.Both,
+                            Direction = FillDirection.Horizontal,
+                            Spacing = new Vector2(0, 0),
+                            Margin = new MarginPadding { Top = 10 },
+                            Children = new Drawable[]
+                            {
+                                PlaysText = new OsuSpriteText
+                                {
+                                    Anchor = Anchor.BottomLeft,
+                                    Origin = Anchor.BottomLeft,
+                                    Font = OsuFont.GetFont(size: 24, weight: FontWeight.Bold),
+                                    Text = ""
+                                },
+                                new OsuSpriteText
+                                {
+                                    Anchor = Anchor.BottomLeft,
+                                    Origin = Anchor.BottomLeft,
+                                    Font = OsuFont.GetFont(size: 24, weight: FontWeight.Bold),
+                                    Text = " performances"
+                                }
+                            }
+                        },
+                        new FillFlowContainer
+                        {
+                            AutoSizeAxes = Axes.Both,
+                            Direction = FillDirection.Horizontal,
+                            Spacing = new Vector2(0, 0),
+                            Margin = new MarginPadding { Top = 5 },
+                            Children = new Drawable[]
+                            {
 
-                        PPText = new OsuSpriteText
-                        {
-                            Anchor = Anchor.BottomLeft,
-                            Origin = Anchor.BottomLeft,
-                            Font = OsuFont.GetFont(size: 20, weight: FontWeight.Bold),
-                            Text = "????.??"
+                                PPText = new OsuSpriteText
+                                {
+                                    Anchor = Anchor.BottomLeft,
+                                    Origin = Anchor.BottomLeft,
+                                    Font = OsuFont.GetFont(size: 20, weight: FontWeight.Bold),
+                                    Text = ""
+                                },
+                                PPSuffix = new OsuSpriteText
+                                {
+                                    Anchor = Anchor.BottomLeft,
+                                    Origin = Anchor.BottomLeft,
+                                    Font = OsuFont.GetFont(size: 16, weight: FontWeight.Bold),
+                                    Text = "pp"
+                                },
+                                BonusPPText = new OsuSpriteText
+                                {
+                                    Anchor = Anchor.BottomLeft,
+                                    Origin = Anchor.BottomLeft,
+                                    Font = OsuFont.GetFont(size: 15, weight: FontWeight.Bold),
+                                    Text = "",
+                                    Margin = new MarginPadding { Left = 5 }
+                                },
+                                BonusPPSuffix = new OsuSpriteText
+                                {
+                                    Anchor = Anchor.BottomLeft,
+                                    Origin = Anchor.BottomLeft,
+                                    Font = OsuFont.GetFont(size: 11, weight: FontWeight.Bold),
+                                    Text = "pp"
+                                }
+                            }
                         },
-                        PPSuffix = new OsuSpriteText
-                        {
-                            Anchor = Anchor.BottomLeft,
-                            Origin = Anchor.BottomLeft,
-                            Font = OsuFont.GetFont(size: 16, weight: FontWeight.Bold),
-                            Text = "pp"
-                        },
-                        BonusPPText = new OsuSpriteText
-                        {
-                            Anchor = Anchor.BottomLeft,
-                            Origin = Anchor.BottomLeft,
-                            Font = OsuFont.GetFont(size: 15, weight: FontWeight.Bold),
-                            Text = "????.??",
-                            Margin = new MarginPadding { Left = 5 }
-                        },
-                        BonusPPSuffix = new OsuSpriteText
-                        {
-                            Anchor = Anchor.BottomLeft,
-                            Origin = Anchor.BottomLeft,
-                            Font = OsuFont.GetFont(size: 11, weight: FontWeight.Bold),
-                            Text = "pp"
-                        }
                     }
                 },
                 ItemsContainer = new FillFlowContainer
@@ -119,8 +140,8 @@ namespace osu.Game.Overlays.Cloudsu
                 },
                 missingText = new OsuSpriteText
                 {
-                    Font = OsuFont.GetFont(size: 15),
-                    Text = "You don't have any performances for this ruleset.",
+                    Font = OsuFont.GetFont(size: 18),
+                    Text = "",
                     Alpha = 0,
                 },
             };
@@ -138,44 +159,67 @@ namespace osu.Game.Overlays.Cloudsu
             scoreManager.ItemRemoved += scoreWasRemoved;
         }
 
-        protected void scoreWasAdded(ScoreInfo score) => Schedule(() =>
+        protected void scoreWasAdded(ScoreInfo score)
         {
-            refresh();
-        });
+            // Only refresh if the score is of the correct ruleset
+            if (score.RulesetID == ruleset.Value.ID)
+                Schedule(refreshScores);
+        }
 
-        protected void scoreWasRemoved(ScoreInfo score) => Schedule(() =>
+        protected void scoreWasRemoved(ScoreInfo score)
         {
-            refresh();
-        });
+            // Only refresh if the score was in the list
+            if (Scores.FindIndex(s => s.ID == score.ID) >= 0)
+                Schedule(refreshScores);
+        }
 
-        public void refresh()
+        private void refreshScores()
+        {
+            // Get all scores for osu!standad with a PP value.
+            // Group them by beatmap ID and then grab the highest PP of each group.
+            // Sort the scores by PP.
+            // Turn the IOrderedEnumerable into a List.
+            Scores = scoreManager.QueryScores(s =>
+                !s.DeletePending && s.Ruleset.ID == ruleset.Value.ID && s.Beatmap != null && s.PP.HasValue
+            ).GroupBy(s => s.BeatmapInfoID).Select(grp =>
+                grp.OrderByDescending(s => s.PP).FirstOrDefault()
+            ).OrderByDescending(s => s.PP).ToList();
+
+            updateStats();
+            recreateList();
+        }
+
+        private void updateStats()
+        {
+            if (!Scores.Any())
+            {
+                StatsContainer.Hide();
+                return;
+            }
+            else
+            {
+                StatsContainer.Show();
+            }
+
+            var i = 0;
+            var pp = (float) Scores.Sum(delegate (ScoreInfo s) { return Math.Pow(0.95, i++) * s.PP; });
+
+            PlaysText.Text = Scores.Count.ToString();
+            PPText.Text = pp.ToString("N2");
+            BonusPPText.Text = (pp + 416.66667).ToString("N2");
+        }
+
+        private void recreateList()
         {
             loadCancellation?.Cancel();
             loadCancellation = new CancellationTokenSource();
 
             ItemsContainer.Clear();
 
-            // Get all scores for osu!standad with a PP value.
-            // Group them by beatmap ID and then grab the highest PP of each group.
-            // Sort the scores by PP.
-            // Turn the IOrderedEnumerable into a List.
-            var scores = scoreManager.QueryScores(s =>
-                !s.DeletePending && s.Ruleset.ID == ruleset.Value.ID && s.Beatmap != null && s.PP.HasValue
-            ).GroupBy(s => s.BeatmapInfoID).Select(grp =>
-                grp.OrderByDescending(s => s.PP).FirstOrDefault()
-            ).OrderByDescending(s => s.PP).ToList();
-
-
-            var i = 0;
-            var pp = (float) scores.Sum(delegate (ScoreInfo s) { return Math.Pow(0.95, i++) * s.PP; });
-
-            PlaysText.Text = scores.Count.ToString() + " performances";
-            PPText.Text = pp.ToString("N2");
-            BonusPPText.Text = (pp + 416.66667).ToString("N2");
-
-            if (!scores.Any())
+            if (!Scores.Any())
             {
                 missingText.Show();
+                missingText.Text = "You don't have any performances for the " + ruleset.Value.Name + " ruleset.";
                 return;
             }
             else
@@ -183,7 +227,7 @@ namespace osu.Game.Overlays.Cloudsu
                 missingText.Hide();
             }
 
-            LoadComponentsAsync(scores.Select(CreateDrawableItem).Where(d => d != null), drawables =>
+            LoadComponentsAsync(Scores.Select(CreateDrawableItem).Where(d => d != null), drawables =>
             {
                 ItemsContainer.AddRange(drawables);
             }, loadCancellation.Token);
@@ -191,8 +235,9 @@ namespace osu.Game.Overlays.Cloudsu
 
         protected Drawable CreateDrawableItem(ScoreInfo model)
         {
-            var beatmapSet = beatmapManager.QueryBeatmapSet(s => s.Beatmaps.Any(b => b.ID == model.BeatmapInfoID));
-            model.Beatmap.Metadata = beatmapSet.Metadata;
+            // Why do we have to query the beatmaps and grab their BeatmapSet metadata?
+            BeatmapInfo beatmap = beatmapManager.QueryBeatmap(b => b.ID == model.BeatmapInfoID);
+            model.Beatmap.Metadata = beatmap.BeatmapSet.Metadata;
             return new DrawableBestPerformanceScore(model, Math.Pow(0.95, ItemsContainer.Count))
             {
                 SelectBeatmap = SelectBeatmap
