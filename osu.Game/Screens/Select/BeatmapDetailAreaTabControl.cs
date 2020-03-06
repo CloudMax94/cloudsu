@@ -92,7 +92,6 @@ namespace osu.Game.Screens.Select
                 },
             };
 
-            ppSortCheckbox.Current.Value = true;
             tabs.Current.ValueChanged += _ => invokeOnFilter();
             ppSortCheckbox.Current.ValueChanged += _ => invokeOnFilter();
             modsCheckbox.Current.ValueChanged += _ => invokeOnFilter();
@@ -102,6 +101,14 @@ namespace osu.Game.Screens.Select
         private void load(OsuColour colour, OsuConfigManager config)
         {
             ppSortCheckbox.AccentColour = modsCheckbox.AccentColour = tabs.AccentColour = colour.YellowLight;
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+            // We set default value after ppSortCheckbox.AccentColour as it would otherwise
+            // apply the color to the checkbox in addition to the label
+            ppSortCheckbox.Current.Value = true;
         }
 
         private void invokeOnFilter()
