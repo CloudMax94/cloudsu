@@ -10,6 +10,7 @@ using osu.Framework.Graphics.Shapes;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Backgrounds;
 using osu.Game.Graphics.Containers;
+using osu.Game.Graphics.Cursor;
 using osu.Game.Online.API;
 using osu.Game.Overlays.Cloudsu;
 using osu.Game.Rulesets;
@@ -20,9 +21,11 @@ namespace osu.Game.Overlays
 {
     public class CloudsuOverlay : FullscreenOverlay
     {
-        private CloudsuHeader header;
+        private readonly Container scrollContainer;
 
-        private CloudsuBestPerformancePanel bestPerformancePanel;
+        private readonly CloudsuHeader Header;
+
+        private CloudsuBestPerformancePanel BestPerformancePanel;
 
         protected Color4 BackgroundColour => OsuColour.FromHex(@"52899a");
         protected Color4 TrianglesColourLight => OsuColour.FromHex(@"6aa6b9");
@@ -33,11 +36,6 @@ namespace osu.Game.Overlays
 
         public CloudsuOverlay()
             : base(OverlayColourScheme.Blue)
-        {
-        }
-
-        [BackgroundDependencyLoader]
-        private void load(IAPIProvider api, Bindable<RulesetInfo> parentRuleset, OsuColour colours)
         {
             Children = new Drawable[]
             {
@@ -61,37 +59,61 @@ namespace osu.Game.Overlays
                         },
                     },
                 },
-                new OsuScrollContainer
+                scrollContainer = new Container
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Child = new FillFlowContainer
+                    Child = new OsuContextMenuContainer
                     {
-                        RelativeSizeAxes = Axes.X,
-                        AutoSizeAxes = Axes.Y,
-                        Direction = FillDirection.Vertical,
-                        Children = new Drawable[]
+                        RelativeSizeAxes = Axes.Both,
+                        Masking = true,
+                        Child = new OsuScrollContainer
                         {
-                            header = new CloudsuHeader
+                            RelativeSizeAxes = Axes.Both,
+                            ScrollbarVisible = false,
+                            Child = new FillFlowContainer
                             {
-                                ShowBestPerformancePage = ShowBestPerformancePage,
-                                ShowOtherPage = ShowOtherPage
-                            },
-                            bestPerformancePanel = new CloudsuBestPerformancePanel
-                            {
-                                Padding = new MarginPadding { Left = 70, Right = 70 },
                                 RelativeSizeAxes = Axes.X,
-                                AutoSizeAxes = Axes.Y
+                                AutoSizeAxes = Axes.Y,
+                                Padding = new MarginPadding { Horizontal = 70, Bottom = 50 },
+                                Direction = FillDirection.Vertical,
+                                Children = new[]
+                                {
+                                    BestPerformancePanel = new CloudsuBestPerformancePanel
+                                    {
+                                        RelativeSizeAxes = Axes.X,
+                                        AutoSizeAxes = Axes.Y
+                                    },
+                                }
                             },
                         },
                     },
                 },
+                new FillFlowContainer
+                {
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    Direction = FillDirection.Vertical,
+                    Children = new Drawable[]
+                    {
+                        Header = new CloudsuHeader
+                        {
+                            ShowBestPerformancePage = ShowBestPerformancePage,
+                            ShowOtherPage = ShowOtherPage
+                        },
+                    },
+                },
             };
+        }
+
+        [BackgroundDependencyLoader]
+        private void load(Bindable<RulesetInfo> parentRuleset)
+        {
 
             ruleset.BindTo(parentRuleset);
-            header.ruleset.Value = ruleset.Value;
-            bestPerformancePanel.ruleset.Value = ruleset.Value;
-            ruleset.ValueChanged += e => header.ruleset.Value = e.NewValue;
-            ruleset.ValueChanged += e => bestPerformancePanel.ruleset.Value = e.NewValue;
+            Header.ruleset.Value = ruleset.Value;
+            BestPerformancePanel.ruleset.Value = ruleset.Value;
+            ruleset.ValueChanged += e => Header.ruleset.Value = e.NewValue;
+            ruleset.ValueChanged += e => BestPerformancePanel.ruleset.Value = e.NewValue;
 
             Current.BindValueChanged(e =>
             {
@@ -101,11 +123,18 @@ namespace osu.Game.Overlays
             Current.TriggerChange();
         }
 
+        protected override void Update()
+        {
+            base.Update();
+
+            scrollContainer.Padding = new MarginPadding { Top = Header.Height };
+        }
+
         protected override void PopIn()
         {
             base.PopIn();
             if (Current.Value == "Best Performance") {
-                bestPerformancePanel.refresh();
+                BestPerformancePanel.refresh();
             }
         }
 
@@ -126,13 +155,13 @@ namespace osu.Game.Overlays
 
             if (tab == "Other")
             {
-                bestPerformancePanel.Hide();
+                BestPerformancePanel.Hide();
             }
             else
             {
-                bestPerformancePanel.refresh();
-                bestPerformancePanel.Show();
-                bestPerformancePanel.FadeTo(1f, 300, Easing.OutQuint);
+                BestPerformancePanel.refresh();
+                BestPerformancePanel.Show();
+                BestPerformancePanel.FadeTo(1f, 300, Easing.OutQuint);
             }
         }
     }

@@ -5,29 +5,35 @@
 // It shows 2 decimal places for PP and has an Action for selecting the beatmap.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using JetBrains.Annotations;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Localisation;
 using osu.Game.Beatmaps;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
+using osu.Game.Graphics.UserInterface;
 using osu.Game.Online.Leaderboards;
 using osu.Game.Overlays.Profile.Sections;
 using osu.Game.Overlays.Profile.Sections.Ranks;
 using osu.Game.Rulesets.UI;
 using osu.Game.Scoring;
+using osu.Game.Screens.Select;
 using osuTK;
+
 
 namespace osu.Game.Overlays.Cloudsu
 {
-    public class DrawableBestPerformanceScore : CompositeDrawable
+    public class DrawableBestPerformanceScore : CompositeDrawable, IHasContextMenu
     {
         private const int height = 40;
         private const int performance_width = 100;
@@ -44,6 +50,9 @@ namespace osu.Game.Overlays.Cloudsu
 
         [Resolved]
         private OverlayColourProvider colourProvider { get; set; }
+
+        [Resolved(CanBeNull = true)]
+        private DialogOverlay dialogOverlay { get; set; }
 
         public DrawableBestPerformanceScore(ScoreInfo score, double weight)
         {
@@ -317,6 +326,17 @@ namespace osu.Game.Overlays.Cloudsu
                     Font = OsuFont.GetFont(size: 12, italics: true)
                 },
             };
+        }
+
+        public MenuItem[] ContextMenuItems
+        {
+            get
+            {
+                return new MenuItem[]
+                {
+                    new OsuMenuItem("Delete", MenuItemType.Destructive, () => dialogOverlay?.Push(new LocalScoreDeleteDialog(Score)))
+                };
+            }
         }
     }
 }
