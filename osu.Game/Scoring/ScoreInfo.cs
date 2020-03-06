@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
+using System.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using osu.Game.Beatmaps;
@@ -14,6 +15,9 @@ using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Scoring;
 using osu.Game.Users;
 using osu.Game.Utils;
+using osu.Game.Configuration;
+using osu.Framework.Bindables;
+using osu.Framework.Logging;
 
 namespace osu.Game.Scoring
 {
@@ -80,7 +84,43 @@ namespace osu.Game.Scoring
             }
         }
 
-        private Mod[] getModsFromRuleset(DeserializedMod[] mods) => Ruleset.CreateInstance().GetAllMods().Where(mod => mods.Any(d => d.Acronym == mod.Acronym)).ToArray();
+        private Mod[] getModsFromRuleset(DeserializedMod[] mods) {
+            var result = new List<Mod>();
+            var allMods = Ruleset.CreateInstance().GetAllMods();
+            foreach (var d in mods)
+            {
+                var m = allMods.First(m => m.Acronym == d.Acronym);
+                foreach (var (attr, property) in m.GetSettingsSourceProperties())
+                {
+                    if (d.Settings.ContainsKey(property.Name))
+                    {
+                        try
+                        {
+                            var val = d.Settings[property.Name];
+                            // If the setting is a bindable we need to get the propery value and write to the bindables Value instead.
+                            // We also cast the value to the proper type before setting it.
+                            var p = m.GetType().GetProperty(property.Name);
+                            if (p.PropertyType.GetInterface("IBindable") != null)
+                            {
+                                var bindable = (dynamic) p.GetValue(m, null);
+                                bindable.Value = Convert.ChangeType(val, bindable.Value.GetType());
+                            }
+                            else
+                            {
+                                property.SetValue(m, Convert.ChangeType(val, p.PropertyType), null);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.Error(e, "getModsFromRuleset SetValue failed.");
+                        }
+                    }
+                }
+                result.Add(m);
+            }
+
+            return result.ToArray();
+        }
 
         private string modsJson;
 
@@ -96,7 +136,15 @@ namespace osu.Game.Scoring
                 if (mods == null)
                     return null;
 
-                return modsJson = JsonConvert.SerializeObject(mods.Select(m => new DeserializedMod { Acronym = m.Acronym }));
+                return modsJson = JsonConvert.SerializeObject(mods.Select(m => {
+                    var settings = new Dictionary<string, dynamic>();
+                    foreach (var (attr, property) in m.GetSettingsSourceProperties())
+                        settings[property.Name] = property.GetValue(m);
+                    return new DeserializedMod {
+                        Acronym = m.Acronym,
+                        Settings = settings
+                    };
+                }));
             }
             set
             {
@@ -186,6 +234,9 @@ namespace osu.Game.Scoring
         protected class DeserializedMod : IMod
         {
             public string Acronym { get; set; }
+
+            [JsonProperty("settings")]
+            public Dictionary<string, dynamic> Settings { get; set; } = new Dictionary<string, dynamic>();
 
             public bool Equals(IMod other) => Acronym == other?.Acronym;
         }
