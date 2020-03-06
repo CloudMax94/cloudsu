@@ -103,13 +103,14 @@ namespace osu.Game.Overlays
 
         protected override void PopIn()
         {
-            Current.TriggerChange();
             base.PopIn();
+            if (Current.Value == "Best Performance") {
+                bestPerformancePanel.refresh();
+            }
         }
 
         public void ShowBestPerformancePage()
         {
-            bestPerformancePanel.refresh();
             Current.Value = "Best Performance";
             Show();
         }
@@ -129,6 +130,7 @@ namespace osu.Game.Overlays
             }
             else
             {
+                bestPerformancePanel.refresh();
                 bestPerformancePanel.Show();
                 bestPerformancePanel.FadeTo(1f, 300, Easing.OutQuint);
             }
