@@ -8,11 +8,14 @@ using JetBrains.Annotations;
 using osuTK;
 using osuTK.Graphics;
 using osu.Framework.Allocation;
+using osu.Framework.Audio;
+using osu.Framework.Audio.Track;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Threading;
 using osu.Framework.Utils;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Drawables;
@@ -26,6 +29,8 @@ using osu.Framework.Localisation;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.UI;
+using osu.Game.Overlays.Settings;
+using osu.Game.Configuration;
 
 namespace osu.Game.Screens.Select
 {
@@ -127,12 +132,17 @@ namespace osu.Game.Screens.Select
 
         public class BufferedWedgeInfo : BufferedContainer
         {
+            [Resolved]
+            private IBindable<IReadOnlyList<Mod>> mods { get; set; }
+
             public OsuSpriteText VersionLabel { get; private set; }
             public OsuSpriteText TitleLabel { get; private set; }
             public OsuSpriteText ArtistLabel { get; private set; }
             public BeatmapSetOnlineStatusPill StatusPill { get; private set; }
             public FillFlowContainer MapperContainer { get; private set; }
             public FillFlowContainer InfoLabelContainer { get; private set; }
+            public InfoLabel LengthLabel { get; private set; }
+            public InfoLabel BPMLabel { get; private set; }
 
             private ILocalisedBindableString titleBinding;
             private ILocalisedBindableString artistBinding;
@@ -282,6 +292,13 @@ namespace osu.Game.Screens.Select
                     StatusPill.Hide();
             }
 
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+
+                mods.BindValueChanged(modsChanged, true);
+            }
+
             private void setMetadata(string source)
             {
                 ArtistLabel.Text = artistBinding.Value;
@@ -297,14 +314,15 @@ namespace osu.Game.Screens.Select
 
                 if (b?.HitObjects?.Any() == true)
                 {
-                    labels.Add(new InfoLabel(new BeatmapStatistic
+                    labels.Add(LengthLabel = new InfoLabel(new BeatmapStatistic
                     {
+
                         Name = "Length",
                         Icon = FontAwesome.Regular.Clock,
                         Content = TimeSpan.FromMilliseconds(b.BeatmapInfo.Length).ToString(@"m\:ss"),
                     }));
 
-                    labels.Add(new InfoLabel(new BeatmapStatistic
+                    labels.Add(BPMLabel = new InfoLabel(new BeatmapStatistic
                     {
                         Name = "BPM",
                         Icon = FontAwesome.Regular.Circle,
@@ -330,15 +348,79 @@ namespace osu.Game.Screens.Select
                 return labels.ToArray();
             }
 
-            private string getBPMRange(IBeatmap beatmap)
+            private readonly List<ISettingsItem> references = new List<ISettingsItem>();
+
+            private void modsChanged(ValueChangedEvent<IReadOnlyList<Mod>> mods)
             {
-                double bpmMax = beatmap.ControlPointInfo.BPMMaximum;
-                double bpmMin = beatmap.ControlPointInfo.BPMMinimum;
+                // TODO: find a more permanent solution for this if/when it is needed in other components.
+                // this is generating drawables for the only purpose of storing bindable references.
+                foreach (var r in references)
+                    r.Dispose();
+
+                references.Clear();
+
+                ScheduledDelegate debounce = null;
+
+                foreach (var mod in mods.NewValue.Where(m => m is IApplicableToTrack))
+                {
+                    foreach (var setting in mod.CreateSettingsControls().OfType<ISettingsItem>())
+                    {
+                        setting.SettingChanged += () =>
+                        {
+                            debounce?.Cancel();
+                            debounce = Scheduler.AddDelayed(updateStatistics, 100);
+                        };
+
+                        references.Add(setting);
+                    }
+                }
+
+                updateStatistics();
+            }
+
+            private void updateStatistics()
+            {
+                var filteredMods = mods.Value;
+                var track = new TrackVirtual(10000);
+                foreach (var mod in filteredMods.OfType<IApplicableToTrack>())
+                {
+                    if (mod is ModTimeRamp)
+                    {
+                        // ModTimeRamp ApplyToTrack would just return the final rate for previewing,
+                        // so we get the average rate and apply it directly to the track.
+                        var ramp = (ModTimeRamp) mod;
+                        var rate = new BindableDouble((ramp.InitialRate.Value + ramp.FinalRate.Value) / 2);
+                        track.AddAdjustment(AdjustableProperty.Frequency, rate);
+
+                    }
+                    else
+                    {
+                        mod.ApplyToTrack(track);
+                    }
+                }
+
+                var b = beatmap.Beatmap;
+                if (b?.HitObjects?.Any() == true)
+                {
+                    var oldLen = LengthLabel.Text;
+                    var oldBPM = BPMLabel.Text;
+                    var newLen = LengthLabel.Text = TimeSpan.FromMilliseconds(b.BeatmapInfo.Length / track.Rate).ToString(@"m\:ss");
+                    var newBPM = BPMLabel.Text = getBPMRange(b, track.Rate);
+                    if (newLen != oldLen || newBPM != oldBPM)
+                        ForceRedraw();
+                }
+
+            }
+
+            private string getBPMRange(IBeatmap beatmap, double rate = 1)
+            {
+                double bpmMax = beatmap.ControlPointInfo.BPMMaximum * rate;
+                double bpmMin = beatmap.ControlPointInfo.BPMMinimum * rate;
 
                 if (Precision.AlmostEquals(bpmMin, bpmMax))
                     return $"{bpmMin:0}";
 
-                return $"{bpmMin:0}-{bpmMax:0} (mostly {beatmap.ControlPointInfo.BPMMode:0})";
+                return $"{bpmMin:0}-{bpmMax:0} (mostly {(beatmap.ControlPointInfo.BPMMode * rate):0})";
             }
 
             private OsuSpriteText[] getMapper(BeatmapMetadata metadata)
@@ -364,6 +446,13 @@ namespace osu.Game.Screens.Select
             public class InfoLabel : Container, IHasTooltip
             {
                 public string TooltipText { get; }
+
+                private OsuSpriteText text;
+                public string Text
+                {
+                    get => text.Text;
+                    set => text.Text = value;
+                }
 
                 public InfoLabel(BeatmapStatistic statistic)
                 {
@@ -399,7 +488,7 @@ namespace osu.Game.Screens.Select
                                 },
                             }
                         },
-                        new OsuSpriteText
+                        text = new OsuSpriteText
                         {
                             Anchor = Anchor.CentreLeft,
                             Origin = Anchor.CentreLeft,
