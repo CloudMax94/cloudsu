@@ -151,7 +151,7 @@ namespace osu.Game.Screens.Select.Details
 
                 double rate = track.Rate;
 
-                HpDrain.Value = (baseDifficulty.DrainRate, (float)((adjustedDifficulty?.DrainRate ?? baseDifficulty.OverallDifficulty) * rate));
+                HpDrain.Value = (baseDifficulty.DrainRate, (float)((adjustedDifficulty?.DrainRate ?? baseDifficulty.DrainRate) * rate));
 
                 double od = adjustedDifficulty?.OverallDifficulty ?? baseDifficulty.OverallDifficulty;
                 Accuracy.Value = (baseDifficulty.OverallDifficulty, (float)(((79.5 - od * 6) / rate) * (-1.0 / 6) + 13.25));
