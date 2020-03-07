@@ -3,6 +3,7 @@
 
 using osuTK.Graphics;
 using osu.Framework.Allocation;
+using osu.Framework.Audio.Track;
 using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -12,6 +13,7 @@ using osu.Game.Graphics.UserInterface;
 using osu.Game.Beatmaps;
 using osu.Framework.Bindables;
 using System.Collections.Generic;
+using osu.Game.Rulesets.Difficulty;
 using osu.Game.Rulesets.Mods;
 using System.Linq;
 using osu.Framework.Threading;
@@ -25,6 +27,9 @@ namespace osu.Game.Screens.Select.Details
     {
         [Resolved]
         private IBindable<IReadOnlyList<Mod>> mods { get; set; }
+
+        [Resolved]
+        private BeatmapManager beatmapManager { get; set; }
 
         protected readonly StatisticRow FirstValue, HpDrain, Accuracy, ApproachRate;
         private readonly StatisticRow starDifficulty;
@@ -87,7 +92,7 @@ namespace osu.Game.Screens.Select.Details
 
             ScheduledDelegate debounce = null;
 
-            foreach (var mod in mods.NewValue.OfType<IApplicableToDifficulty>())
+            foreach (var mod in mods.NewValue.Where(m => m is IApplicableToDifficulty || m is IApplicableToBeatmap || m is IApplicableToTrack))
             {
                 foreach (var setting in mod.CreateSettingsControls().OfType<ISettingsItem>())
                 {
@@ -132,11 +137,38 @@ namespace osu.Game.Screens.Select.Details
                     break;
             }
 
-            starDifficulty.Value = ((float)(Beatmap?.StarDifficulty ?? 0), null);
+            // We exclude certains mods since they don't really calculate properly anyway
+            var filteredMods = mods.Value.Where(m => !(m is ModTimeRamp));
+            if (baseDifficulty != null && filteredMods.Any(m => m is IApplicableToDifficulty || m is IApplicableToBeatmap || m is IApplicableToTrack))
+            {
+                // NOTE:
+                // Accuracy and Approach Rate values from the difficulty calculator are not correct due to int casting to reflect osu!stable.
+                // Because of this we calculate them here instead.
 
-            HpDrain.Value = (baseDifficulty?.DrainRate ?? 0, adjustedDifficulty?.DrainRate);
-            Accuracy.Value = (baseDifficulty?.OverallDifficulty ?? 0, adjustedDifficulty?.OverallDifficulty);
-            ApproachRate.Value = (baseDifficulty?.ApproachRate ?? 0, adjustedDifficulty?.ApproachRate);
+                var track = new TrackVirtual(10000);
+                foreach (var mod in filteredMods.OfType<IApplicableToTrack>())
+                    mod.ApplyToTrack(track);
+
+                double rate = track.Rate;
+
+                HpDrain.Value = (baseDifficulty.DrainRate, (float)((adjustedDifficulty?.DrainRate ?? baseDifficulty.OverallDifficulty) * rate));
+
+                double od = adjustedDifficulty?.OverallDifficulty ?? baseDifficulty.OverallDifficulty;
+                Accuracy.Value = (baseDifficulty.OverallDifficulty, (float)(((79.5 - od * 6) / rate) * (-1.0 / 6) + 13.25));
+
+                double preempt = BeatmapDifficulty.DifficultyRange(adjustedDifficulty?.ApproachRate ?? baseDifficulty.ApproachRate, 1800, 1200, 450) / rate;
+                ApproachRate.Value = (baseDifficulty.ApproachRate, (float)(preempt > 1200 ? (1800 - preempt) / 120 : (1200 - preempt) / 150 + 5));
+
+                DifficultyAttributes da = Beatmap.Ruleset.CreateInstance().CreateDifficultyCalculator(beatmapManager.GetWorkingBeatmap(Beatmap)).Calculate(filteredMods.ToArray());
+                starDifficulty.Value = ((float)(Beatmap?.StarDifficulty ?? 0), (float)da.StarRating);
+            }
+            else
+            {
+                HpDrain.Value = (baseDifficulty?.DrainRate ?? 0, adjustedDifficulty?.DrainRate);
+                Accuracy.Value = (baseDifficulty?.OverallDifficulty ?? 0, adjustedDifficulty?.OverallDifficulty);
+                ApproachRate.Value = (baseDifficulty?.ApproachRate ?? 0, adjustedDifficulty?.ApproachRate);
+                starDifficulty.Value = ((float)(Beatmap?.StarDifficulty ?? 0), null);
+            }
         }
 
         public class StatisticRow : Container, IHasAccentColour
