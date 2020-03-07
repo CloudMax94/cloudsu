@@ -139,7 +139,7 @@ namespace osu.Game.Screens.Select.Details
 
             // We exclude certains mods since they don't really calculate properly anyway
             var filteredMods = mods.Value.Where(m => !(m is ModTimeRamp));
-            if (baseDifficulty != null && filteredMods.Any(m => m is IApplicableToDifficulty || m is IApplicableToBeatmap || m is IApplicableToTrack))
+            if (filteredMods.Any(m => m is IApplicableToDifficulty || m is IApplicableToBeatmap || m is IApplicableToTrack))
             {
                 // NOTE:
                 // Accuracy and Approach Rate values from the difficulty calculator are not correct due to int casting to reflect osu!stable.
@@ -151,16 +151,24 @@ namespace osu.Game.Screens.Select.Details
 
                 double rate = track.Rate;
 
-                HpDrain.Value = (baseDifficulty.DrainRate, (float)((adjustedDifficulty?.DrainRate ?? baseDifficulty.DrainRate) * rate));
+                HpDrain.Value = (baseDifficulty?.DrainRate ?? 0, (float)((adjustedDifficulty?.DrainRate ?? (baseDifficulty?.DrainRate ?? 0)) * rate));
 
-                double od = adjustedDifficulty?.OverallDifficulty ?? baseDifficulty.OverallDifficulty;
-                Accuracy.Value = (baseDifficulty.OverallDifficulty, (float)(((79.5 - od * 6) / rate) * (-1.0 / 6) + 13.25));
+                double od = adjustedDifficulty?.OverallDifficulty ?? (baseDifficulty?.OverallDifficulty ?? 0);
+                Accuracy.Value = (baseDifficulty?.OverallDifficulty ?? 0, (float)(((79.5 - od * 6) / rate) * (-1.0 / 6) + 13.25));
 
-                double preempt = BeatmapDifficulty.DifficultyRange(adjustedDifficulty?.ApproachRate ?? baseDifficulty.ApproachRate, 1800, 1200, 450) / rate;
-                ApproachRate.Value = (baseDifficulty.ApproachRate, (float)(preempt > 1200 ? (1800 - preempt) / 120 : (1200 - preempt) / 150 + 5));
+                double preempt = BeatmapDifficulty.DifficultyRange(adjustedDifficulty?.ApproachRate ?? (baseDifficulty?.ApproachRate ?? 0), 1800, 1200, 450) / rate;
+                ApproachRate.Value = (baseDifficulty?.ApproachRate ?? 0, (float)(preempt > 1200 ? (1800 - preempt) / 120 : (1200 - preempt) / 150 + 5));
 
-                DifficultyAttributes da = Beatmap.Ruleset.CreateInstance().CreateDifficultyCalculator(beatmapManager.GetWorkingBeatmap(Beatmap)).Calculate(filteredMods.ToArray());
-                starDifficulty.Value = ((float)(Beatmap?.StarDifficulty ?? 0), (float)da.StarRating);
+                var workingbeatmap = beatmapManager.GetWorkingBeatmap(Beatmap);
+                if (!(workingbeatmap is DummyWorkingBeatmap))
+                {
+                    DifficultyAttributes da = Beatmap.Ruleset.CreateInstance().CreateDifficultyCalculator(workingbeatmap).Calculate(filteredMods.ToArray());
+                    starDifficulty.Value = ((float)(Beatmap?.StarDifficulty ?? 0), (float)da.StarRating);
+                }
+                else
+                {
+                    starDifficulty.Value = ((float)(Beatmap?.StarDifficulty ?? 0), null);
+                }
             }
             else
             {
@@ -169,6 +177,7 @@ namespace osu.Game.Screens.Select.Details
                 ApproachRate.Value = (baseDifficulty?.ApproachRate ?? 0, adjustedDifficulty?.ApproachRate);
                 starDifficulty.Value = ((float)(Beatmap?.StarDifficulty ?? 0), null);
             }
+
         }
 
         public class StatisticRow : Container, IHasAccentColour
